@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                   String               @id @default(uuid())
+  name                 String
+  phone                String               @unique
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  isVerified           Boolean              @default(false)
+  coins                Int                  @default(0)
+  lastMinedAt          DateTime?
+  lastClaimedAt        DateTime?
+  miningHistory        MiningHistory[]
+  sentTransactions     TransactionHistory[] @relation("sender")
+  receivedTransactions TransactionHistory[] @relation("receiver")
+  player               Player?
+
+  @@index([phone])
+}
+
+model TransactionHistory {
+  id         Int      @id @default(autoincrement())
+  senderId   String
+  receiverId String
+  amount     Int
+  timestamp  DateTime @default(now())
+  sender     User     @relation("sender", fields: [senderId], references: [id])
+  receiver   User     @relation("receiver", fields: [receiverId], references: [id])
+}
+
+model Coin {
+  id              Int      @id @default(autoincrement())
+  totalSupply     Int      @default(10000)
+  remainingSupply Int      @default(10000)
+  minedAt         DateTime @default(now())
+}
+
+model MiningHistory {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  coinMined Int      @default(1)
+  minedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Player {
+  id          Int         @id @default(autoincrement())
+  userId      String      @unique
+  hp          Int         @default(100)
+  attackPower Int         @default(10)
+  level       Int         @default(1)
+  experience  Int         @default(0)
+  rank        String      @default("Novice")
+  inventory   Inventory[]
+  user        User        @relation(fields: [userId], references: [id])
+  maxHp       Int         @default(100)
+
+  @@index([userId])
+}
+
+model Inventory {
+  id         Int       @id @default(autoincrement())
+  playerId   Int
+  itemId     Int
+  quantity   Int       @default(1)
+  player     Player    @relation(fields: [playerId], references: [id])
+  item       Shop      @relation(fields: [itemId], references: [id])
+  expiration DateTime?
+
+  @@index([playerId])
+  @@index([itemId])
+}
+
+model Shop {
+  id          Int         @id @default(autoincrement())
+  name        String
+  price       Int
+  stock       Int
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  inventory   Inventory[]
+}
